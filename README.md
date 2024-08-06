@@ -1,4 +1,4 @@
-<img src=https://github.com/user-attachments/assets/94bfcebc-4ecd-4911-9eb9-13d0288e3e5b" width="100px">
+<img src="https://github.com/user-attachments/assets/94bfcebc-4ecd-4911-9eb9-13d0288e3e5b" width="100px">
 
 # Fuzzy Prefix Search
 
