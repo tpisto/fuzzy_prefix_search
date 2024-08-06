@@ -1,11 +1,11 @@
+#![allow(dead_code)]
+
 /// Import necessary modules from the standard library
 use std::cell::RefCell; // Allows interior mutability, crucial for our Trie implementation
 use std::cmp::min; // For finding the minimum of two values in edit distance calculation
-use std::collections::{HashMap, HashSet}; // For efficient storage and retrieval of children in TrieNode and data_map in Trie
+use std::collections::HashMap; // For efficient storage and retrieval of children in TrieNode and data_map in Trie
 use std::hash::Hash; // Trait bound for generic type T, allowing it to be used as a key in HashMap
 use std::rc::{Rc, Weak}; // For reference counting (Rc) and weak references (Weak) to avoid memory leaks in cyclic structures
-
-use crate::jaro_winkler::*;
 
 /// A node within a Trie structure. Represents a single character in a word.
 ///
@@ -266,7 +266,7 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> Trie<T> {
         let should_search_childs = *current_row.iter().min().unwrap() <= max_distance;
 
         // Check if the current node satisfies the search criteria
-        if let Some(ref node_word) = node.word {
+        if node.word.is_some() {
             if current_row[row_length - 1] <= max_distance {
                 collect_all_words_from_this_node(node, results);
                 return;

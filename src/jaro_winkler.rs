@@ -1,5 +1,4 @@
 use crate::trie::Trie;
-use std::collections::HashMap;
 use std::hash::Hash;
 
 impl<T: Clone + Default + PartialEq + Eq + Hash> Trie<T> {
