@@ -1,5 +1,3 @@
-Here's a great README.md file to introduce this library:
-
 # Fuzzy Prefix Search
 
 Flexible Trie implementation in Rust for fuzzy prefix string searching and auto-completion.
