@@ -78,8 +78,6 @@ trie.remove_all(&2);
 
 ## Performance
 
-The Fuzzy Prefix Search is designed for high performance, using efficient data structures and algorithms:
-
 - O(k) time complexity for insertion, where k is the length of the word
 - Space-efficient storage using a tree structure with shared prefixes
 - TODO: Benchmarks, optimizations, algorithm selection...
