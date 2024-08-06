@@ -2,7 +2,7 @@ use crate::trie::Trie;
 use std::hash::Hash;
 
 impl<T: Clone + Default + PartialEq + Eq + Hash> Trie<T> {
-    pub fn calculate_jaro_winkler_score(&self, query: &str, word: &str) -> f32 {
+    pub(crate) fn calculate_jaro_winkler_score(&self, query: &str, word: &str) -> f32 {
         // Calculate Jaro distance
         let jaro_dist = self.jaro_distance(query, word);
 
@@ -16,7 +16,7 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> Trie<T> {
         jaro_dist + (prefix_length as f32 * prefix_scale * (1.0 - jaro_dist))
     }
 
-    pub fn jaro_distance(&self, s1: &str, s2: &str) -> f32 {
+    pub(crate) fn jaro_distance(&self, s1: &str, s2: &str) -> f32 {
         let s1_len = s1.len();
         let s2_len = s2.len();
 

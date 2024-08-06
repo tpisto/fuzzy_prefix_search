@@ -44,6 +44,22 @@ struct TrieNode<T: Default + PartialEq> {
 ///
 /// - `root`: The root node of the trie, wrapped in `Rc` and `RefCell` for shared ownership and interior mutability.
 /// - `data_map`: A map that associates data with trie nodes for quick access during removal operations.
+///
+/// # Examples
+///
+/// ```
+/// use fuzzy_prefix_search::Trie;
+///
+/// let mut trie = Trie::new();
+/// trie.insert("apple", 1);
+/// trie.insert("application", 2);
+/// trie.insert("app", 3);
+///
+/// let results = trie.search_within_distance("appl", 1);
+/// for result in results {
+///     println!("Found word: {}, with data: {:?}", result.word, result.data);
+/// }
+/// ```
 pub struct Trie<T: Clone + Default + PartialEq + Eq + Hash> {
     root: Rc<RefCell<TrieNode<T>>>,
     data_map: HashMap<T, Vec<Weak<RefCell<TrieNode<T>>>>>,
@@ -54,8 +70,25 @@ pub struct Trie<T: Clone + Default + PartialEq + Eq + Hash> {
 /// # Type Parameters
 ///
 /// - `T`: The type of data associated with each word in the trie.
+///
+/// # Fields
+///
+/// - `word`: The word found in the trie.
+/// - `data`: A vector of associated data for the word.
+///
+/// # Examples
+///
+/// ```
+/// use fuzzy_prefix_search::{Trie, SearchResult};
+///
+/// let mut trie = Trie::new();
+/// trie.insert("apple", 1);
+///
+/// let results = trie.search_within_distance("apple", 0);
+/// assert_eq!(results[0], SearchResult { word: "apple".to_string(), data: vec![1] });
+/// ```
 #[derive(Debug)]
-struct SearchResult<T> {
+pub struct SearchResult<T> {
     pub word: String,
     pub data: Vec<T>,
 }
@@ -65,6 +98,26 @@ struct SearchResult<T> {
 /// # Type Parameters
 ///
 /// - `T`: The type of data associated with each word in the trie.
+///
+/// # Fields
+///
+/// - `word`: The word found in the trie.
+/// - `data`: A vector of associated data for the word.
+/// - `score`: The similarity score of the word to the searched term.
+///
+/// # Examples
+///
+/// ```
+/// use fuzzy_prefix_search::{Trie, SearchResultWithScore};
+///
+/// let mut trie = Trie::new();
+/// trie.insert("apple", 1);
+///
+/// let results = trie.search_within_distance_scored("appl", 1);
+/// for result in results {
+///     println!("Found word: {}, score: {}", result.word, result.score);
+/// }
+/// ```
 #[derive(Debug)]
 pub struct SearchResultWithScore<T> {
     pub word: String,
@@ -94,7 +147,15 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> Trie<T> {
     /// # Returns
     ///
     /// A new `Trie` instance.
-    fn new() -> Self {
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fuzzy_prefix_search::Trie;
+    ///
+    /// let trie: Trie<i32> = Trie::new();
+    /// ```
+    pub fn new() -> Self {
         Trie {
             root: Rc::new(RefCell::new(TrieNode {
                 node_char: '$', // Root node has no parent character
@@ -110,7 +171,17 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> Trie<T> {
     ///
     /// - `word`: The word to insert into the trie.
     /// - `data`: The data associated with the word.
-    fn insert(&mut self, word: &str, data: T) {
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fuzzy_prefix_search::Trie;
+    ///
+    /// let mut trie = Trie::new();
+    /// trie.insert("hello", 1);
+    /// trie.insert("world", 2);
+    /// ```
+    pub fn insert(&mut self, word: &str, data: T) {
         // Start at the root node
         let mut current = Rc::clone(&self.root);
         // Add $ prefix to handle empty strings and provide a common starting point
@@ -167,7 +238,20 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> Trie<T> {
     /// # Returns
     ///
     /// A vector of `SearchResult` containing the words and associated data found within the given distance.
-    fn search_within_distance(&self, word: &str, max_distance: usize) -> Vec<SearchResult<T>> {
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fuzzy_prefix_search::Trie;
+    ///
+    /// let mut trie = Trie::new();
+    /// trie.insert("apple", 1);
+    /// trie.insert("applet", 2);
+    ///
+    /// let results = trie.search_within_distance("apple", 1);
+    /// assert_eq!(results.len(), 2);
+    /// ```
+    pub fn search_within_distance(&self, word: &str, max_distance: usize) -> Vec<SearchResult<T>> {
         // Add $ prefix to the search word for consistency with stored words
         let augmented_word = format!("${}", word);
         let augmented_word_length = augmented_word.len();
@@ -202,7 +286,22 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> Trie<T> {
     /// # Returns
     ///
     /// A vector of `SearchResultWithScore` containing the words, associated data, and similarity scores found within the given distance.
-    fn search_within_distance_scored(
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fuzzy_prefix_search::Trie;
+    ///
+    /// let mut trie = Trie::new();
+    /// trie.insert("apple", 1);
+    ///
+    /// let results = trie.search_within_distance_scored("appl", 1);
+    /// assert!(!results.is_empty());
+    /// for result in results {
+    ///     println!("Found word: {}, with score: {}", result.word, result.score);
+    /// }
+    /// ```
+    pub fn search_within_distance_scored(
         &self,
         word: &str,
         max_distance: usize,
@@ -323,6 +422,20 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> Trie<T> {
     /// # Parameters
     ///
     /// - `data`: The data value to remove from the trie.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fuzzy_prefix_search::Trie;
+    ///
+    /// let mut trie = Trie::new();
+    /// trie.insert("apple", 1);
+    /// trie.insert("application", 2);
+    ///
+    /// trie.remove_all(&1);
+    /// let results = trie.search_within_distance("apple", 0);
+    /// assert!(results.is_empty());
+    /// ```
     pub fn remove_all(&mut self, data: &T) {
         if let Some(nodes) = self.data_map.get_mut(data) {
             let mut empty_nodes = Vec::new();
