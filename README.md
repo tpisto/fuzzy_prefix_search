@@ -96,6 +96,12 @@ trie.remove_all(&2);
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+## Resources
+
+https://phiresky.github.io/levenshtein-demo/
+https://www.geeksforgeeks.org/trie-insert-and-search/
+http://stevehanov.ca/blog/?id=114
+
 ## License
 
 This project is licensed under the MIT or Apache 2.0 License - see the [LICENSE](LICENSE) files for details.
