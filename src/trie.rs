@@ -60,6 +60,7 @@ struct TrieNode<T: Default + PartialEq> {
 ///     println!("Found word: {}, with data: {:?}", result.word, result.data);
 /// }
 /// ```
+#[derive(Debug)]
 pub struct Trie<T: Clone + Default + PartialEq + Eq + Hash> {
     root: Rc<RefCell<TrieNode<T>>>,
     data_map: HashMap<T, Vec<Weak<RefCell<TrieNode<T>>>>>,
