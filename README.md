@@ -14,10 +14,11 @@ Documentation:
 
 ## Features
 
-- Fast prefix-based fuzzy searching (Levenshtein distance)
+- Prefix-based fuzzy searching (Levenshtein distance)
 - Fuzzy search with customizable edit distance
 - Multiple data associations per word
 - Jaro-Winkler similarity scoring for search results
+- Thread safe
 - No unsafe
 - No dependencies
 
@@ -90,6 +91,7 @@ trie.remove_all(&2);
 
 - O(k) time complexity for insertion, where k is the length of the word
 - Space-efficient storage using a tree structure with shared prefixes
+- For thread safe we use Arc + RwLock that would need further optimizations
 - TODO: Benchmarks, optimizations, algorithm selection...
 
 ## Contributing
