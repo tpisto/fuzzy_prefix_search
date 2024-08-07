@@ -8,6 +8,9 @@
 
 Flexible Trie implementation in Rust for fuzzy prefix string searching and auto-completion.
 
+Documentation:
+-   [API reference (docs.rs)](https://docs.rs/fuzzy_prefix_search)
+
 ## Features
 
 - Fast prefix-based fuzzy searching (Levenshtein distance)
