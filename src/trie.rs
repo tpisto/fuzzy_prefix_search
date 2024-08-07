@@ -470,7 +470,7 @@ mod tests {
 
     #[test]
     fn test_insert_and_search() {
-        let mut trie = Trie::new();
+        let trie = Trie::new();
         trie.insert("apple", 1);
         trie.insert("app", 2);
         trie.insert("application", 3);
@@ -493,7 +493,7 @@ mod tests {
 
     #[test]
     fn test_search_with_distance() {
-        let mut trie = Trie::new();
+        let trie = Trie::new();
         trie.insert("apple", 1);
         trie.insert("appl", 2);
         trie.insert("aple", 3);
@@ -505,7 +505,7 @@ mod tests {
 
     #[test]
     fn test_multiple_data_per_word() {
-        let mut trie = Trie::new();
+        let trie = Trie::new();
         trie.insert("apple", 1);
         trie.insert("apple", 2);
         trie.insert("apple", 3);
@@ -517,7 +517,7 @@ mod tests {
 
     #[test]
     fn test_remove_all() {
-        let mut trie = Trie::new();
+        let trie = Trie::new();
         trie.insert("apple", 1);
         trie.insert("app", 2);
         trie.insert("application", 2);
@@ -538,7 +538,7 @@ mod tests {
 
     #[test]
     fn test_empty_string() {
-        let mut trie = Trie::new();
+        let trie = Trie::new();
         trie.insert("", 1);
         trie.insert("a", 2);
 
@@ -563,7 +563,7 @@ mod tests {
 
     #[test]
     fn test_long_words() {
-        let mut trie = Trie::new();
+        let trie = Trie::new();
         let long_word = "supercalifragilisticexpialidocious";
         trie.insert(long_word, 1);
 
@@ -580,7 +580,7 @@ mod tests {
 
     #[test]
     fn test_prefix_search() {
-        let mut trie = Trie::new();
+        let trie = Trie::new();
         trie.insert("apple", 1);
         trie.insert("application", 2);
         trie.insert("appreciate", 3);
@@ -591,7 +591,7 @@ mod tests {
 
     #[test]
     fn test_case_sensitivity() {
-        let mut trie = Trie::new();
+        let trie = Trie::new();
         trie.insert("Apple", 1);
         trie.insert("apple", 2);
 
@@ -608,7 +608,7 @@ mod tests {
 
     #[test]
     fn test_remove_and_reinsert() {
-        let mut trie = Trie::new();
+        let trie = Trie::new();
         trie.insert("apple", 1);
         trie.remove_all(&1);
         trie.insert("apple", 2);
@@ -626,7 +626,7 @@ mod tests {
 
     #[test]
     fn test_large_distance_search() {
-        let mut trie = Trie::new();
+        let trie = Trie::new();
         trie.insert("apple", 1);
         trie.insert("banana", 2);
         trie.insert("cherry", 3);
@@ -647,7 +647,7 @@ mod tests {
 
     #[test]
     fn test_prefix_additions_with_distance() {
-        let mut trie = Trie::new();
+        let trie = Trie::new();
         trie.insert("apple", 1);
         trie.insert("app", 2);
         trie.insert("application", 3);
@@ -659,7 +659,7 @@ mod tests {
 
     #[test]
     fn test_prefix_deletions_with_distance() {
-        let mut trie = Trie::new();
+        let trie = Trie::new();
         trie.insert("apple", 1);
         trie.insert("application", 3);
         // Should not be found
@@ -672,7 +672,7 @@ mod tests {
 
     #[test]
     fn test_prefix_deletions_with_distance_2() {
-        let mut trie = Trie::new();
+        let trie = Trie::new();
         trie.insert("appleton", 1);
         trie.insert("apple", 2);
         trie.insert("matrix", 3);
@@ -731,7 +731,7 @@ mod tests {
 
         #[test]
         fn test_concurrent_searches() {
-            let mut trie = Trie::new();
+            let trie = Trie::new();
             for i in 0..1000 {
                 trie.insert(&format!("word{}", i), i);
             }
