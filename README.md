@@ -1,6 +1,7 @@
 [<img alt="github" src="https://img.shields.io/badge/github-tpisto/fuzzy_prefix_search-8da0cb?style=for-the-badge&labelColor=555555&logo=github" height="20">](https://github.com/tpisto/fuzzy_prefix_search)
 [<img alt="crates.io" src="https://img.shields.io/crates/v/fuzzy_prefix_search.svg?style=for-the-badge&color=fc8d62&logo=rust" height="20">](https://crates.io/crates/fuzzy_prefix_search)
 [<img alt="docs.rs" src="https://img.shields.io/badge/docs.rs-fuzzy_prefix_search-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs" height="20">](https://docs.rs/fuzzy_prefix_search)
+[<img alt="tests" src="https://img.shields.io/github/actions/workflow/status/tpisto/fuzzy_prefix_search/rust.yml?branch=main&style=for-the-badge" height="20">](https://github.com/tpisto/fuzzy_prefix_search/actions?query=branch%3Amain)
 
 <img src="https://github.com/user-attachments/assets/94bfcebc-4ecd-4911-9eb9-13d0288e3e5b" width="100px">
 
