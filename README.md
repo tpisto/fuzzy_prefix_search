@@ -27,7 +27,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-fuzzy_prefix_search = "0.1"
+fuzzy_prefix_search = "0.2"
 ```
 
 ## Usage
