@@ -19,7 +19,6 @@ Documentation:
 - Multiple data associations per word
 - Jaro-Winkler similarity scoring for search results
 - Thread safe
-- No unsafe
 - No dependencies
 
 ## Installation
@@ -93,6 +92,8 @@ trie.remove_all(&2);
 - Space-efficient storage using a tree structure with shared prefixes
 - For thread safe we use Arc + RwLock that would need further optimizations
 - TODO: Benchmarks, optimizations, algorithm selection...
+
+Caveat Emptor: we use *unsafe* in deletes for 2x read performance compared to Rc/RefCell approach.
 
 ## Contributing
 
