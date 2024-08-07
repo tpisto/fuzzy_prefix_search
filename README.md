@@ -102,7 +102,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - https://www.geeksforgeeks.org/trie-insert-and-search/
 - http://stevehanov.ca/blog/?id=114
 - https://murilo.wordpress.com/2011/02/01/fast-and-easy-levenshtein-distance-using-a-trie-in-c/
-
+- https://blog.vjeux.com/2011/c/c-fuzzy-search-with-trie.html
+  
 ## License
 
 This project is licensed under the MIT or Apache 2.0 License - see the [LICENSE](LICENSE) files for details.
