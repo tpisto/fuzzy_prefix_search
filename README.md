@@ -90,7 +90,6 @@ trie.remove_all(&2);
 
 - O(k) time complexity for insertion, where k is the length of the word
 - Space-efficient storage using a tree structure with shared prefixes
-- For thread safe we use Arc + RwLock that would need further optimizations
 - TODO: Benchmarks, optimizations, algorithm selection...
 
 Caveat Emptor: we use *unsafe* in deletes for 2x read performance compared to Rc/RefCell approach.
