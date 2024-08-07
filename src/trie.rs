@@ -311,7 +311,7 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> Trie<T> {
             .map(|result| {
                 let score = self.calculate_jaro_winkler_score(word, &result.word);
                 SearchResultWithScore {
-                    word: result.word.clone(), // Clone the word here
+                    word: result.word.clone(),
                     data: result.data,
                     score,
                 }
@@ -365,6 +365,7 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> Trie<T> {
         let should_search_childs = *current_row.iter().min().unwrap() <= max_distance;
 
         // Check if the current node satisfies the search criteria
+        // NOTE: This is the "normal" matching case, where we are looking for a word
         if node.word.is_some() {
             if current_row[row_length - 1] <= max_distance {
                 collect_all_words_from_this_node(node, results);
@@ -389,6 +390,7 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> Trie<T> {
             }
         }
         // If we are not anymore looking for childs, we can check if we have some insertions or deletions to check
+        // NOTE: Here is the magic sauce for the prefix search in addition to the "normal" case
         else if rows.len() > max_distance && rows.len() - max_distance >= word.len() + 1 {
             if rows.len() > word.len() {
                 // Scan backward (prefix deletions)
