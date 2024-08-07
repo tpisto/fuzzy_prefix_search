@@ -101,6 +101,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - https://phiresky.github.io/levenshtein-demo/
 - https://www.geeksforgeeks.org/trie-insert-and-search/
 - http://stevehanov.ca/blog/?id=114
+- https://murilo.wordpress.com/2011/02/01/fast-and-easy-levenshtein-distance-using-a-trie-in-c/
 
 ## License
 
