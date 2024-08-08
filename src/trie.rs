@@ -263,12 +263,6 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> TrieData<T> {
     fn search_within_distance(&self, word: &str, max_distance: usize) -> Vec<SearchResult<T>> {
         // Add $ prefix to the search word for consistency with stored words
         let augmented_word = format!("${}", word);
-        let augmented_word_length = augmented_word.len();
-        // Initialize the rows vector with the first row
-        let mut rows = vec![vec![0; augmented_word_length + 1]];
-        for i in 0..=augmented_word_length {
-            rows[0][i] = i;
-        }
         let last_row: Vec<usize> = (0..=augmented_word.len()).collect();
         let mut results = Vec::new();
 
@@ -341,7 +335,9 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> TrieData<T> {
         // Initialize the first element of the current row
         current_row[0] = if is_root { 0 } else { last_row[0] + 1 };
 
-        // Calculate edit distances for the current row using dynamic programming
+        // Calculate Levenshtein edit distances for the current row
+        // You can debug, by printing current row and checking from here:
+        // https://phiresky.github.io/levenshtein-demo/
         for i in 1..row_length {
             let insert_or_del = min(current_row[i - 1] + 1, last_row[i] + 1);
             let replace = if word.chars().nth(i - 1) == Some(ch) {
