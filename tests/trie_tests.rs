@@ -164,10 +164,11 @@ mod tests {
         trie.insert("apple", 1);
         trie.insert("banana", 2);
         trie.insert("cherry", 3);
+        trie.insert("churry", 4);
 
-        let results = trie.search_within_distance("grape", 5);
-        println!("{:?}", results);
-        assert_eq!(results.len(), 2);
+        let results = trie.search_within_distance("grape", 4);
+        assert_eq!(results.len(), 3);
+
         // Check that it matches with apple and banana
         assert!(results.contains(&SearchResult {
             word: "apple".to_string(),
@@ -176,6 +177,10 @@ mod tests {
         assert!(results.contains(&SearchResult {
             word: "banana".to_string(),
             data: vec![2]
+        }));
+        assert!(results.contains(&SearchResult {
+            word: "cherry".to_string(),
+            data: vec![3]
         }));
     }
 

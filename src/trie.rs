@@ -269,13 +269,14 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> TrieData<T> {
         for i in 0..=augmented_word_length {
             rows[0][i] = i;
         }
+        let last_row: Vec<usize> = (0..=augmented_word.len()).collect();
         let mut results = Vec::new();
 
         // Start the recursive search from the root node
-        self.search_impl(
+        self.search_recursive(
             &self.root,
             '$',
-            &mut rows,
+            &last_row,
             &augmented_word,
             max_distance,
             &mut results,
@@ -324,11 +325,11 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> TrieData<T> {
     /// - `max_distance`: The maximum edit distance allowed for the search.
     /// - `results`: A vector to store the search results.
     /// - `is_root`: A boolean indicating if the current node is the root node.
-    fn search_impl(
+    fn search_recursive(
         &self,
         node: &TrieNode<T>,
         ch: char,
-        rows: &mut Vec<Vec<usize>>,
+        last_row: &Vec<usize>,
         word: &str,
         max_distance: usize,
         results: &mut Vec<SearchResult<T>>,
@@ -338,71 +339,48 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> TrieData<T> {
         let mut current_row = vec![0; row_length];
 
         // Initialize the first element of the current row
-        current_row[0] = if is_root {
-            0
-        } else {
-            rows.last().unwrap()[0] + 1
-        };
+        current_row[0] = if is_root { 0 } else { last_row[0] + 1 };
 
         // Calculate edit distances for the current row using dynamic programming
         for i in 1..row_length {
-            let insert_or_del = min(current_row[i - 1] + 1, rows.last().unwrap()[i] + 1);
+            let insert_or_del = min(current_row[i - 1] + 1, last_row[i] + 1);
             let replace = if word.chars().nth(i - 1) == Some(ch) {
-                rows.last().unwrap()[i - 1] // No change needed
+                last_row[i - 1] // No change needed
             } else {
-                rows.last().unwrap()[i - 1] + 1 // Replacement needed
+                last_row[i - 1] + 1 // Replacement needed
             };
             current_row[i] = min(insert_or_del, replace);
         }
 
-        // Add the current row to the rows vector
-        let should_search_childs = *current_row.iter().min().unwrap() <= max_distance;
-
         // Check if the current node satisfies the search criteria
-        // NOTE: This is the "normal" matching case, where we are looking for a word
         if node.word.is_some() {
             if current_row[row_length - 1] <= max_distance {
                 collect_all_words_from_this_node(node, results);
                 return;
             }
         }
-
-        rows.push(current_row);
+        // Prefix match, also taking into account the max_distance (insertions or deletions before the word)
+        else if current_row[0] >= word.len() - max_distance
+            && current_row.last().unwrap() <= &max_distance
+        {
+            collect_all_words_from_this_node(node, results);
+            return;
+        }
 
         // Recursively search child nodes if within max_distance
-        if should_search_childs {
+        if *current_row.iter().min().unwrap() <= max_distance {
             for (next_ch, child) in &node.children {
-                self.search_impl(child, *next_ch, rows, word, max_distance, results, false);
+                self.search_recursive(
+                    child,
+                    *next_ch,
+                    &current_row,
+                    word,
+                    max_distance,
+                    results,
+                    false,
+                );
             }
         }
-        // If we are not anymore looking for childs, we can check if we have some insertions or deletions to check
-        // NOTE: Here is the magic sauce for the prefix search in addition to the "normal" case
-        else if rows.len() > max_distance && rows.len() - max_distance >= word.len() + 1 {
-            if rows.len() > word.len() {
-                // Scan backward (prefix deletions)
-                for i in word.len() - max_distance + 1..word.len() + 2 {
-                    if rows.len() > i && rows[i].last().unwrap() <= &max_distance {
-                        collect_all_words_from_this_node(node, results);
-                        rows.pop();
-                        return;
-                    }
-                }
-
-                // Scan forward (insertions)
-                for i in word.len() + 2..word.len() + 2 + max_distance + 1 {
-                    if rows.len() > i {
-                        if rows[i].last().unwrap() <= &max_distance {
-                            collect_all_words_from_this_node(node, results);
-                            rows.pop();
-                            return;
-                        }
-                    }
-                }
-            }
-        }
-
-        // Remove the current row before returning
-        rows.pop();
     }
 
     /// Removes all occurrences of a given data value from the trie.
@@ -457,11 +435,9 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> TrieData<T> {
                     break;
                 }
                 // Find the parent node by looking up in data_map
-                let parent_entry = self
-                    .data_map
+                self.data_map
                     .iter()
-                    .find_map(|(_, nodes)| nodes.iter().find(|&&ptr| ptr == current).copied());
-                parent_entry
+                    .find_map(|(_, nodes)| nodes.iter().find(|&&ptr| ptr == current).copied())
             };
 
             if let Some(parent_ptr) = parent_ptr {
