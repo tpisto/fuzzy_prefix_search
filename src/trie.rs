@@ -272,6 +272,7 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> TrieData<T> {
             '$',
             &last_row,
             &augmented_word,
+            augmented_word.chars().count() as u8,
             max_distance,
             &mut results,
             true,
@@ -325,11 +326,12 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> TrieData<T> {
         ch: char,
         last_row: &Vec<usize>,
         word: &str,
+        word_char_count: u8,
         max_distance: usize,
         results: &mut Vec<SearchResult<T>>,
         is_root: bool,
     ) {
-        let row_length = word.len() + 1;
+        let row_length = (word_char_count + 1) as usize;
         let mut current_row = vec![0; row_length];
 
         // Initialize the first element of the current row
@@ -371,6 +373,7 @@ impl<T: Clone + Default + PartialEq + Eq + Hash> TrieData<T> {
                     *next_ch,
                     &current_row,
                     word,
+                    word_char_count,
                     max_distance,
                     results,
                     false,
