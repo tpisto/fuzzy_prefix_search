@@ -199,11 +199,9 @@ impl<T: Clone + PartialEq + Eq + Hash> TrieData<T> {
         }
 
         // Check if the current node satisfies the search criteria
-        if node.word.is_some() {
-            if current_row[row_length - 1] <= max_distance {
-                self.collect_all_words_from_this_node(node, results);
-                return;
-            }
+        if node.word.is_some() && current_row[row_length - 1] <= max_distance {
+            self.collect_all_words_from_this_node(node, results);
+            return;
         }
         // Prefix match, also taking into account the max_distance (insertions or deletions before the word)
         else if current_row[0] >= word.len() - max_distance
