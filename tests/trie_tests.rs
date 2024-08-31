@@ -71,6 +71,39 @@ mod tests {
     }
 
     #[test]
+    fn test_remove_long_words() {
+        let trie = Trie::new();
+        trie.insert("aava", "100");
+        trie.insert("auto", "101");
+        trie.insert("aarrekartta", "101");
+        trie.insert("aamu", "102");
+        trie.insert("auto", "103");
+        trie.insert("aarremartta", "104");
+
+        trie.remove_all(&"101");
+
+        let results = trie.search_within_distance("aa", 1);
+        assert_eq!(results.len(), 4);
+
+        assert!(results.contains(&SearchResult {
+            word: "aava".to_string(),
+            data: vec!["100"]
+        }));
+        assert!(results.contains(&SearchResult {
+            word: "aarremartta".to_string(),
+            data: vec!["104"]
+        }));
+        assert!(results.contains(&SearchResult {
+            word: "aamu".to_string(),
+            data: vec!["102"]
+        }));
+        assert!(results.contains(&SearchResult {
+            word: "auto".to_string(),
+            data: vec!["103"]
+        }));
+    }
+
+    #[test]
     fn test_empty_string() {
         let trie = Trie::new();
         trie.insert("", 1);
@@ -233,6 +266,136 @@ mod tests {
             word: "applitix".to_string(),
             data: vec![3]
         }));
+    }
+
+    #[test]
+    fn test_search_within_distance_scored() {
+        let trie = Trie::new();
+        trie.insert("apple", 1);
+        trie.insert("appl", 2);
+        trie.insert("ale", 3);
+        trie.insert("applet", 4);
+
+        let results = trie.search_within_distance_scored("apple", 1);
+        assert_eq!(results.len(), 3);
+
+        // Check that the results match
+        assert!(results.contains(&SearchResultWithScore {
+            word: "appl".to_string(),
+            data: vec![2],
+            score: 0.96
+        }));
+        assert!(results.contains(&SearchResultWithScore {
+            word: "apple".to_string(),
+            data: vec![1],
+            score: 1.0
+        }));
+        assert!(results.contains(&SearchResultWithScore {
+            word: "applet".to_string(),
+            data: vec![4],
+            score: 0.96666664
+        }));
+    }
+
+    #[test]
+    fn test_search_within_distance_scored_prefix() {
+        let trie = Trie::new();
+        trie.insert("apple", 1);
+        trie.insert("application", 2);
+        trie.insert("appreciation", 3);
+
+        let results = trie.search_within_distance_scored("app", 0);
+        assert_eq!(results.len(), 3);
+
+        // Check that it matches with the scores
+        assert!(results.contains(&SearchResultWithScore {
+            word: "apple".to_string(),
+            data: vec![1],
+            score: 0.90666664
+        }));
+        assert!(results.contains(&SearchResultWithScore {
+            word: "application".to_string(),
+            data: vec![2],
+            score: 0.830303
+        }));
+        assert!(results.contains(&SearchResultWithScore {
+            word: "appreciation".to_string(),
+            data: vec![3],
+            score: 0.825
+        }));
+    }
+
+    #[test]
+    fn test_search_within_distance_scored_empty_string() {
+        let trie = Trie::new();
+        trie.insert("", 1);
+        trie.insert("a", 2);
+
+        let results = trie.search_within_distance_scored("", 0);
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].word, "");
+        assert_eq!(results[0].score, 1.0);
+        assert!(results[1].score < 1.0);
+    }
+
+    #[test]
+    fn test_search_within_distance_scored_case_sensitivity() {
+        let trie = Trie::new();
+        trie.insert("Apple", 1);
+        trie.insert("apple", 2);
+
+        let results = trie.search_within_distance_scored("Apple", 0);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].word, "Apple");
+        assert_eq!(results[0].score, 1.0);
+    }
+
+    #[test]
+    fn test_search_within_distance_scored_large_distance() {
+        let trie = Trie::new();
+        trie.insert("apple", 1);
+        trie.insert("banana", 2);
+        trie.insert("cherry", 3);
+        trie.insert("date", 4);
+
+        let results = trie.search_within_distance_scored("grape", 4);
+        assert!(!results.is_empty());
+
+        // Check that the results match
+        assert!(results.contains(&SearchResultWithScore {
+            word: "apple".to_string(),
+            data: vec![1],
+            score: 0.59999996
+        }));
+        assert!(results.contains(&SearchResultWithScore {
+            word: "banana".to_string(),
+            data: vec![2],
+            score: 0.45555556
+        }));
+        assert!(results.contains(&SearchResultWithScore {
+            word: "cherry".to_string(),
+            data: vec![3],
+            score: 0.41111112
+        }));
+        assert!(results.contains(&SearchResultWithScore {
+            word: "date".to_string(),
+            data: vec![4],
+            score: 0.6333333
+        }));
+    }
+
+    #[test]
+    fn test_search_within_distance_scored_multiple_data() {
+        let trie = Trie::new();
+        trie.insert("apple", 1);
+        trie.insert("apple", 2);
+        trie.insert("applet", 3);
+
+        let results = trie.search_within_distance_scored("apple", 1);
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].word, "apple");
+        assert_eq!(results[0].data, vec![1, 2]);
+        assert_eq!(results[0].score, 1.0);
     }
 
     #[cfg(test)]
