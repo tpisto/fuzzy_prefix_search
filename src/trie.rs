@@ -1,15 +1,21 @@
 use core::fmt;
 use std::alloc::{alloc, dealloc, Layout};
 use std::cmp::min;
-use std::collections::HashMap;
+use std::collections::HashMap; // For efficient storage and retrieval of children in TrieNode and data_map in Trie
 use std::fmt::Debug;
-use std::hash::Hash;
+use std::hash::Hash; // Trait bound for generic type T, allowing it to be used as a key in HashMap
 use std::ptr;
 use std::sync::{Arc, RwLock};
 
 unsafe impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> Send for TrieData<T> {}
 unsafe impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> Sync for TrieData<T> {}
 
+/// A node within a Trie structure. Represents a single character in a word.
+///
+/// # Type Parameters
+///
+/// - `T`: The type of data associated with each word in the trie.
+///   Must implement `PartialEq` for equality checks and cloning.
 struct TrieNode<T: Default + PartialEq> {
     children: HashMap<char, *mut TrieNode<T>>,
     parent: *mut TrieNode<T>,
@@ -19,6 +25,12 @@ struct TrieNode<T: Default + PartialEq> {
 }
 
 impl<T: Default + PartialEq> TrieNode<T> {
+    /// Creates a new TrieNode and returns a raw pointer to it.
+    ///
+    /// # Safety
+    ///
+    /// This function uses unsafe code to allocate memory and initialize the TrieNode.
+    /// The caller is responsible for properly managing the returned pointer.
     fn new() -> *mut Self {
         let layout = Layout::new::<Self>();
         let ptr = unsafe { alloc(layout) as *mut Self };
@@ -37,6 +49,12 @@ impl<T: Default + PartialEq> TrieNode<T> {
         ptr
     }
 
+    /// Drops a TrieNode, deallocating its memory.
+    ///
+    /// # Safety
+    ///
+    /// This function uses unsafe code to deallocate memory.
+    /// The caller must ensure that the pointer is valid and that this node is no longer in use.
     unsafe fn drop(ptr: *mut Self) {
         ptr::drop_in_place(ptr);
         dealloc(ptr as *mut u8, Layout::new::<Self>());
@@ -65,6 +83,12 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
         }
     }
 
+    /// Inserts a word and associated data into the trie.
+    ///
+    /// # Parameters
+    ///
+    /// - `word`: The word to insert into the trie.
+    /// - `data`: The data associated with the word.
     fn insert(&mut self, word: &str, data: T) {
         let mut current = self.root;
         let augmented_word = format!("${}", word);
@@ -86,6 +110,16 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
         self.data_map.entry(data).or_default().push(current);
     }
 
+    /// Searches for words within a given edit distance or starting with the given prefix.
+    ///
+    /// # Parameters
+    ///
+    /// - `word`: The word to search for in the trie.
+    /// - `max_distance`: The maximum edit distance allowed for the search.
+    ///
+    /// # Returns
+    ///
+    /// A vector of `SearchResult` containing the words and associated data found within the given distance.
     fn search_within_distance(&self, word: &str, max_distance: usize) -> Vec<SearchResult<T>> {
         let augmented_word = format!("${}", word);
         let last_row: Vec<usize> = (0..=augmented_word.len()).collect();
@@ -105,6 +139,16 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
         results
     }
 
+    /// Searches for words within a given edit distance or starting with the given prefix and returns results with a similarity score.
+    ///
+    /// # Parameters
+    ///
+    /// - `word`: The word to search for in the trie.
+    /// - `max_distance`: The maximum edit distance allowed for the search.
+    ///
+    /// # Returns
+    ///
+    /// A vector of `SearchResultWithScore` containing the words, associated data, and similarity scores found within the given distance.
     fn search_within_distance_scored(
         &self,
         word: &str,
@@ -123,6 +167,18 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
             .collect()
     }
 
+    /// Recursive implementation of the search algorithm.
+    ///
+    /// # Parameters
+    ///
+    /// - `node`: The current node in the trie.
+    /// - `ch`: The character of the current node.
+    /// - `last_row`: The previous row of the edit distance matrix.
+    /// - `word`: The word to search for in the trie.
+    /// - `word_char_count`: The number of characters in the search word.
+    /// - `max_distance`: The maximum edit distance allowed for the search.
+    /// - `results`: A mutable vector to store the search results.
+    /// - `is_root`: A boolean indicating if the current node is the root node.
     fn search_recursive(
         &self,
         node: *mut TrieNode<T>,
@@ -139,23 +195,32 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
 
         current_row[0] = if is_root { 0 } else { last_row[0] + 1 };
 
+        // Calculate Levenshtein edit distances for the current row
+        // You can debug, by printing current row and checking from here:
+        // https://phiresky.github.io/levenshtein-demo/
         for i in 1..row_length {
             let insert_or_del = min(current_row[i - 1] + 1, last_row[i] + 1);
             let replace = if word.chars().nth(i - 1) == Some(ch) {
-                last_row[i - 1]
+                last_row[i - 1] // No change needed
             } else {
-                last_row[i - 1] + 1
+                last_row[i - 1] + 1 // Replacement needed
             };
             current_row[i] = min(insert_or_del, replace);
         }
 
         let node = unsafe { &*node };
-        let has_word = node.word.is_some();
-        let is_end_of_word = current_row[row_length - 1] <= max_distance;
-        let is_potential_match = current_row[0] >= word.len() - max_distance
-            && current_row.last().unwrap() <= &max_distance;
 
-        if (has_word && is_end_of_word) || (!has_word && is_potential_match) {
+        // Check if the current node satisfies the search criteria
+        if node.word.is_some() {
+            if current_row[row_length - 1] <= max_distance {
+                self.collect_all_words_from_this_node(node, results);
+                return;
+            }
+        }
+        // Prefix match, also taking into account the max_distance (insertions or deletions before the word)
+        else if current_row[0] >= word.len() - max_distance
+            && current_row.last().unwrap() <= &max_distance
+        {
             self.collect_all_words_from_this_node(node, results);
             return;
         }
@@ -176,6 +241,11 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
         }
     }
 
+    /// Removes all occurrences of a given data value from the trie.
+    ///
+    /// # Parameters
+    ///
+    /// - `data`: The data value to remove from the trie.
     fn remove_all(&mut self, data: &T) {
         if let Some(nodes) = self.data_map.get(data) {
             let nodes_to_remove: Vec<_> = nodes.clone();
@@ -195,6 +265,11 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
         self.data_map.remove(data);
     }
 
+    /// Removes a node and its parents if they become empty.
+    ///
+    /// # Parameters
+    ///
+    /// - `node_ptr`: A raw pointer to the node to be removed.
     fn remove_node(&mut self, mut node_ptr: *mut TrieNode<T>) {
         while !node_ptr.is_null() {
             let node = unsafe { &mut *node_ptr };
@@ -230,6 +305,12 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
         }
     }
 
+    /// Collects all words and associated data from a node and its descendants.
+    ///
+    /// # Parameters
+    ///
+    /// - `node`: The node to start collecting from.
+    /// - `results`: A mutable vector to store the collected results.
     fn collect_all_words_from_this_node(
         &self,
         node: &TrieNode<T>,
@@ -249,11 +330,29 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
     }
 }
 
+/// A thread-safe wrapper for the Trie data structure.
+///
+/// # Type Parameters
+///
+/// - `T`: The type of data associated with each word in the trie.
 pub struct Trie<T: Clone + Default + PartialEq + Eq + Hash + Debug> {
     trie_data: Arc<RwLock<TrieData<T>>>,
 }
 
 impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> Trie<T> {
+    /// Creates a new thread-safe `Trie` with an empty root node and data map.
+    ///
+    /// # Returns
+    ///
+    /// A new `Trie` instance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fuzzy_prefix_search::Trie;
+    ///
+    /// let trie: Trie<i32> = Trie::new();
+    /// ```
     pub fn new() -> Self {
         Trie {
             trie_data: Arc::new(RwLock::new(TrieData {
@@ -263,16 +362,80 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> Trie<T> {
         }
     }
 
+    /// Inserts a word and associated data into the trie.
+    ///
+    /// # Parameters
+    ///
+    /// - `word`: The word to insert into the trie.
+    /// - `data`: The data associated with the word.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fuzzy_prefix_search::Trie;
+    ///
+    /// let trie = Trie::new();
+    /// trie.insert("hello", 1);
+    /// trie.insert("world", 2);
+    /// ```
     pub fn insert(&self, word: &str, data: T) {
         let mut trie_data = self.trie_data.write().unwrap();
         trie_data.insert(word, data);
     }
 
+    /// Searches for words within a given edit distance or starting with the given prefix.
+    ///
+    /// # Parameters
+    ///
+    /// - `word`: The word to search for in the trie.
+    /// - `max_distance`: The maximum edit distance allowed for the search.
+    ///
+    /// # Returns
+    ///
+    /// A vector of `SearchResult` containing the words and associated data found within the given distance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fuzzy_prefix_search::Trie;
+    ///
+    /// let trie = Trie::new();
+    /// trie.insert("apple", 1);
+    /// trie.insert("applet", 2);
+    ///
+    /// let results = trie.search_within_distance("apple", 1);
+    /// assert_eq!(results.len(), 2);
+    /// ```
     pub fn search_within_distance(&self, word: &str, max_distance: usize) -> Vec<SearchResult<T>> {
         let trie_data = self.trie_data.read().unwrap();
         trie_data.search_within_distance(word, max_distance)
     }
 
+    /// Searches for words within a given edit distance or starting with the given prefix and returns results with a similarity score.
+    ///
+    /// # Parameters
+    ///
+    /// - `word`: The word to search for in the trie.
+    /// - `max_distance`: The maximum edit distance allowed for the search.
+    ///
+    /// # Returns
+    ///
+    /// A vector of `SearchResultWithScore` containing the words, associated data, and similarity scores found within the given distance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fuzzy_prefix_search::Trie;
+    ///
+    /// let trie = Trie::new();
+    /// trie.insert("apple", 1);
+    ///
+    /// let results = trie.search_within_distance_scored("appl", 1);
+    /// assert!(!results.is_empty());
+    /// for result in results {
+    ///     println!("Found word: {}, with score: {}", result.word, result.score);
+    /// }
+    /// ```
     pub fn search_within_distance_scored(
         &self,
         word: &str,
@@ -282,18 +445,47 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> Trie<T> {
         trie_data.search_within_distance_scored(word, max_distance)
     }
 
+    /// Removes all occurrences of a given data value from the trie.
+    ///
+    /// # Parameters
+    ///
+    /// - `data`: The data value to remove from the trie.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fuzzy_prefix_search::Trie;
+    ///
+    /// let trie = Trie::new();
+    /// trie.insert("apple", 1);
+    /// trie.insert("application", 2);
+    ///
+    /// trie.remove_all(&1);
+    /// let results = trie.search_within_distance("apple", 0);
+    /// assert!(results.is_empty());
+    /// ```
     pub fn remove_all(&self, data: &T) {
         let mut trie_data = self.trie_data.write().unwrap();
         trie_data.remove_all(data);
     }
 }
 
+/// Represents the result of a search in the trie.
+///
+/// # Type Parameters
+///
+/// - `T`: The type of data associated with each word in the trie.
 #[derive(Debug)]
 pub struct SearchResult<T> {
     pub word: String,
     pub data: Vec<T>,
 }
 
+/// Represents the result of a search in the trie with an additional score for similarity.
+///
+/// # Type Parameters
+///
+/// - `T`: The type of data associated with each word in the trie.
 #[derive(Debug, PartialEq)]
 pub struct SearchResultWithScore<T> {
     pub word: String,
@@ -306,6 +498,9 @@ impl<T: PartialEq> PartialEq for SearchResult<T> {
         self.word == other.word && self.data == other.data
     }
 }
+
+// Custom debuggers and formatters so that we will be able to see the 
+// Trie data structure in a more readable way (not just pointer addresses)
 
 impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> fmt::Debug for Trie<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
