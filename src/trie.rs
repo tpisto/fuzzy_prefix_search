@@ -3,103 +3,60 @@ use std::alloc::{alloc, dealloc, Layout};
 use std::cmp::min;
 use std::collections::HashMap; // For efficient storage and retrieval of children in TrieNode and data_map in Trie
 use std::fmt::Debug;
-use std::hash::Hash; // Trait bound for generic type T, allowing it to be used as a key in HashMap
+use std::hash::Hash;
+use std::pin::Pin;
+// Trait bound for generic type T, allowing it to be used as a key in HashMap
+use std::marker::PhantomPinned;
 use std::ptr;
 use std::sync::{Arc, RwLock};
 
 unsafe impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> Send for TrieData<T> {}
 unsafe impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> Sync for TrieData<T> {}
 
-/// A node within a Trie structure. Represents a single character in a word.
-///
-/// # Type Parameters
-///
-/// - `T`: The type of data associated with each word in the trie.
-///   Must implement `PartialEq` for equality checks and cloning.
 struct TrieNode<T: Default + PartialEq> {
-    children: HashMap<char, *mut TrieNode<T>>,
+    children: HashMap<char, Pin<Box<TrieNode<T>>>>,
     parent: *mut TrieNode<T>,
     word: Option<String>,
     data: Vec<T>,
     is_end: bool,
+    _pinned: PhantomPinned,
 }
 
 impl<T: Default + PartialEq> TrieNode<T> {
-    /// Creates a new TrieNode and returns a raw pointer to it.
-    ///
-    /// # Safety
-    ///
-    /// This function uses unsafe code to allocate memory and initialize the TrieNode.
-    /// The caller is responsible for properly managing the returned pointer.
-    fn new() -> *mut Self {
-        let layout = Layout::new::<Self>();
-        let ptr = unsafe { alloc(layout) as *mut Self };
-        unsafe {
-            ptr::write(
-                ptr,
-                TrieNode {
-                    children: HashMap::new(),
-                    parent: ptr::null_mut(),
-                    word: None,
-                    data: Vec::new(),
-                    is_end: false,
-                },
-            );
-        }
-        ptr
-    }
-
-    /// Drops a TrieNode, deallocating its memory.
-    ///
-    /// # Safety
-    ///
-    /// This function uses unsafe code to deallocate memory.
-    /// The caller must ensure that the pointer is valid and that this node is no longer in use.
-    unsafe fn drop(ptr: *mut Self) {
-        ptr::drop_in_place(ptr);
-        dealloc(ptr as *mut u8, Layout::new::<Self>());
+    fn new() -> Pin<Box<Self>> {
+        let node = TrieNode {
+            children: HashMap::new(),
+            parent: ptr::null_mut(),
+            word: None,
+            data: Vec::new(),
+            is_end: false,
+            _pinned: PhantomPinned,
+        };
+        Box::pin(node)
     }
 }
 
 pub(crate) struct TrieData<T: Clone + Default + PartialEq + Eq + Hash + Debug> {
-    root: *mut TrieNode<T>,
+    root: Pin<Box<TrieNode<T>>>,
     data_map: HashMap<T, Vec<*mut TrieNode<T>>>,
 }
 
-impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> Drop for TrieData<T> {
-    fn drop(&mut self) {
-        self.drop_node(self.root);
-    }
-}
-
 impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
-    fn drop_node(&mut self, node: *mut TrieNode<T>) {
-        if !node.is_null() {
-            let node = unsafe { &mut *node };
-            for child in node.children.values() {
-                self.drop_node(*child);
-            }
-            unsafe { TrieNode::drop(node) };
-        }
-    }
-
-    /// Inserts a word and associated data into the trie.
-    ///
-    /// # Parameters
-    ///
-    /// - `word`: The word to insert into the trie.
-    /// - `data`: The data associated with the word.
     fn insert(&mut self, word: &str, data: T) {
-        let mut current = self.root;
+        let mut current = unsafe { self.root.as_mut().get_unchecked_mut() as *mut TrieNode<T> };
         let augmented_word = format!("${}", word);
 
         for c in augmented_word.chars() {
             let node = unsafe { &mut *current };
-            current = *node.children.entry(c).or_insert_with(|| {
-                let new_node = TrieNode::new();
-                unsafe { (*new_node).parent = current };
+            let new_node = node.children.entry(c).or_insert_with(|| {
+                let mut new_node = TrieNode::new();
+                unsafe { new_node.as_mut().get_unchecked_mut().parent = current };
                 new_node
             });
+
+            unsafe {
+                current = new_node.as_mut().get_unchecked_mut() as *mut TrieNode<T>;
+            }
         }
 
         let node = unsafe { &mut *current };
@@ -126,7 +83,7 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
         let mut results = Vec::new();
 
         self.search_recursive(
-            self.root,
+            &self.root,
             '$',
             &last_row,
             &augmented_word,
@@ -181,7 +138,7 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
     /// - `is_root`: A boolean indicating if the current node is the root node.
     fn search_recursive(
         &self,
-        node: *mut TrieNode<T>,
+        node: &Pin<Box<TrieNode<T>>>,
         ch: char,
         last_row: &Vec<usize>,
         word: &str,
@@ -208,8 +165,6 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
             current_row[i] = min(insert_or_del, replace);
         }
 
-        let node = unsafe { &*node };
-
         // Check if the current node satisfies the search criteria
         if node.word.is_some() {
             if current_row[row_length - 1] <= max_distance {
@@ -228,7 +183,7 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
         if *current_row.iter().min().unwrap() <= max_distance {
             for (next_ch, child) in &node.children {
                 self.search_recursive(
-                    *child,
+                    child,
                     *next_ch,
                     &current_row,
                     word,
@@ -295,10 +250,13 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
             let parent = unsafe { &mut *parent_ptr };
 
             // Find and remove this node from its parent's children
-            parent.children.retain(|_, &mut child| child != node_ptr);
-
-            // Drop the current node
-            unsafe { TrieNode::drop(node_ptr) };
+            unsafe {
+                parent.children.retain(|_, child| {
+                    let child_ptr = Pin::into_inner_unchecked(child.as_ref()) as *const TrieNode<T>
+                        as *mut TrieNode<T>;
+                    child_ptr != node_ptr
+                });
+            }
 
             // Move up to the parent for the next iteration
             node_ptr = parent_ptr;
@@ -499,7 +457,7 @@ impl<T: PartialEq> PartialEq for SearchResult<T> {
     }
 }
 
-// Custom debuggers and formatters so that we will be able to see the 
+// Custom debuggers and formatters so that we will be able to see the
 // Trie data structure in a more readable way (not just pointer addresses)
 
 impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> fmt::Debug for Trie<T> {
