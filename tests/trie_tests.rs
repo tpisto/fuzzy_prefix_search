@@ -104,6 +104,20 @@ mod tests {
     }
 
     #[test]
+    fn test_remove_with_more_varying_words() {
+        let trie = Trie::new();
+        trie.insert("abc", 0);
+        trie.insert("cde", 1);
+        trie.insert("def", 2);
+        trie.insert("efg", 3);
+        trie.insert("fgh", 4);
+        trie.insert("ghi", 5);
+        trie.remove_all(&0);
+
+        assert_eq!(trie.search_within_distance("abc", 0).len(), 0);
+    }
+
+    #[test]
     fn test_empty_string() {
         let trie = Trie::new();
         trie.insert("", 1);
