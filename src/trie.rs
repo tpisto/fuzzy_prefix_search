@@ -3,16 +3,22 @@ use std::alloc::{alloc, dealloc, Layout};
 use std::cmp::min;
 use std::collections::HashMap; // For efficient storage and retrieval of children in TrieNode and data_map in Trie
 use std::fmt::Debug;
-use std::hash::Hash;
-use std::pin::Pin;
-// Trait bound for generic type T, allowing it to be used as a key in HashMap
+use std::hash::Hash; // Trait bound for generic type T, allowing it to be used as a key in HashMap
 use std::marker::PhantomPinned;
+use std::pin::Pin;
 use std::ptr;
 use std::sync::{Arc, RwLock};
 
+// This should be safe because we only access Trie through Arc<RwLock<>> and TrieData is not directly accessed (not public)
 unsafe impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> Send for TrieData<T> {}
 unsafe impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> Sync for TrieData<T> {}
 
+/// A node within a Trie structure. Represents a single character in a word.
+///
+/// # Type Parameters
+///
+/// - `T`: The type of data associated with each word in the trie.
+///   Must implement `PartialEq` for equality checks.
 struct TrieNode<T: Default + PartialEq> {
     children: HashMap<char, Pin<Box<TrieNode<T>>>>,
     parent: *mut TrieNode<T>,
@@ -36,12 +42,24 @@ impl<T: Default + PartialEq> TrieNode<T> {
     }
 }
 
+/// The core Trie data structure for efficient word storage and retrieval.
+///
+/// # Type Parameters
+///
+/// - `T`: The type of data associated with each word in the trie.
+///   Must implement `Clone`, `Default`, `PartialEq`, `Eq`, and `Hash` for various operations.
 pub(crate) struct TrieData<T: Clone + Default + PartialEq + Eq + Hash + Debug> {
     root: Pin<Box<TrieNode<T>>>,
     data_map: HashMap<T, Vec<*mut TrieNode<T>>>,
 }
 
 impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
+    /// Inserts a word and associated data into the trie.
+    ///
+    /// # Parameters
+    ///
+    /// - `word`: The word to insert into the trie.
+    /// - `data`: The data associated with the word.
     fn insert(&mut self, word: &str, data: T) {
         let mut current = unsafe { self.root.as_mut().get_unchecked_mut() as *mut TrieNode<T> };
         let augmented_word = format!("${}", word);
