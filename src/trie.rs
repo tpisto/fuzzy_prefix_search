@@ -1,5 +1,4 @@
 use core::fmt;
-use std::alloc::{alloc, dealloc, Layout};
 use std::cmp::min;
 use std::collections::HashMap; // For efficient storage and retrieval of children in TrieNode and data_map in Trie
 use std::fmt::Debug;
@@ -300,7 +299,7 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
         }
 
         for child in node.children.values() {
-            let child_node = unsafe { &**child };
+            let child_node = &**child;
             self.collect_all_words_from_this_node(child_node, results);
         }
     }
@@ -490,7 +489,7 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> fmt::Debug for Trie<T> 
 impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> fmt::Debug for TrieData<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TrieData")
-            .field("root", &unsafe { &*self.root })
+            .field("root", &*self.root)
             .field("data_map", &self.data_map)
             .finish()
     }
@@ -504,7 +503,7 @@ impl<T: Default + PartialEq + Debug> fmt::Debug for TrieNode<T> {
                 &self
                     .children
                     .iter()
-                    .map(|(k, v)| (k, unsafe { &**v }))
+                    .map(|(k, v)| (k, &**v))
                     .collect::<HashMap<_, _>>(),
             )
             .field("word", &self.word)
