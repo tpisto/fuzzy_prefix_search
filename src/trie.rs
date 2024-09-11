@@ -3,8 +3,6 @@ use std::cmp::min;
 use std::collections::HashMap; // For efficient storage and retrieval of children in TrieNode and data_map in Trie
 use std::fmt::Debug;
 use std::hash::Hash; // Trait bound for generic type T, allowing it to be used as a key in HashMap
-use std::marker::PhantomPinned;
-use std::pin::Pin;
 use std::ptr;
 use std::sync::{Arc, RwLock};
 
@@ -19,25 +17,23 @@ unsafe impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> Sync for TrieDat
 /// - `T`: The type of data associated with each word in the trie.
 ///   Must implement `PartialEq` for equality checks.
 struct TrieNode<T: Default + PartialEq> {
-    children: HashMap<char, Pin<Box<TrieNode<T>>>>,
+    children: HashMap<char, Box<TrieNode<T>>>,
     parent: *mut TrieNode<T>,
     word: Option<String>,
     data: Vec<T>,
     is_end: bool,
-    _pinned: PhantomPinned,
 }
 
 impl<T: Default + PartialEq> TrieNode<T> {
-    fn new() -> Pin<Box<Self>> {
+    fn new() -> Box<Self> {
         let node = TrieNode {
             children: HashMap::new(),
             parent: ptr::null_mut(),
             word: None,
             data: Vec::new(),
             is_end: false,
-            _pinned: PhantomPinned,
         };
-        Box::pin(node)
+        Box::new(node)
     }
 }
 
@@ -48,7 +44,7 @@ impl<T: Default + PartialEq> TrieNode<T> {
 /// - `T`: The type of data associated with each word in the trie.
 ///   Must implement `Clone`, `Default`, `PartialEq`, `Eq`, and `Hash` for various operations.
 pub(crate) struct TrieData<T: Clone + Default + PartialEq + Eq + Hash + Debug> {
-    root: Pin<Box<TrieNode<T>>>,
+    root: Box<TrieNode<T>>,
     data_map: HashMap<T, Vec<*mut TrieNode<T>>>,
 }
 
@@ -60,20 +56,18 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
     /// - `word`: The word to insert into the trie.
     /// - `data`: The data associated with the word.
     fn insert(&mut self, word: &str, data: T) {
-        let mut current = unsafe { self.root.as_mut().get_unchecked_mut() as *mut TrieNode<T> };
+        let mut current = self.root.as_mut() as *mut TrieNode<T>;
         let augmented_word = format!("${}", word);
 
         for c in augmented_word.chars() {
             let node = unsafe { &mut *current };
             let new_node = node.children.entry(c).or_insert_with(|| {
                 let mut new_node = TrieNode::new();
-                unsafe { new_node.as_mut().get_unchecked_mut().parent = current };
+                new_node.as_mut().parent = current;
                 new_node
             });
 
-            unsafe {
-                current = new_node.as_mut().get_unchecked_mut() as *mut TrieNode<T>;
-            }
+            current = new_node.as_mut() as *mut TrieNode<T>;
         }
 
         let node = unsafe { &mut *current };
@@ -155,7 +149,7 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
     /// - `is_root`: A boolean indicating if the current node is the root node.
     fn search_recursive(
         &self,
-        node: &Pin<Box<TrieNode<T>>>,
+        node: &Box<TrieNode<T>>,
         ch: char,
         last_row: &Vec<usize>,
         word: &str,
@@ -267,13 +261,10 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
             let parent = unsafe { &mut *parent_ptr };
 
             // Find and remove this node from its parent's children
-            unsafe {
-                parent.children.retain(|_, child| {
-                    let child_ptr = Pin::into_inner_unchecked(child.as_ref()) as *const TrieNode<T>
-                        as *mut TrieNode<T>;
-                    child_ptr != node_ptr
-                });
-            }
+            parent.children.retain(|_, child| {
+                let child_ptr = child.as_ref() as *const TrieNode<T> as *mut TrieNode<T>;
+                child_ptr != node_ptr
+            });
 
             // Move up to the parent for the next iteration
             node_ptr = parent_ptr;
