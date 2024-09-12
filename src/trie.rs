@@ -7,8 +7,8 @@ use std::ptr;
 use std::sync::{Arc, RwLock};
 
 // This should be safe because we only access Trie through Arc<RwLock<>> and TrieData is not directly accessed (not public)
-unsafe impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> Send for TrieData<T> {}
-unsafe impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> Sync for TrieData<T> {}
+unsafe impl<T: Clone + PartialEq + Eq + Hash + Debug> Send for TrieData<T> {}
+unsafe impl<T: Clone + PartialEq + Eq + Hash + Debug> Sync for TrieData<T> {}
 
 /// A node within a Trie structure. Represents a single character in a word.
 ///
@@ -16,7 +16,7 @@ unsafe impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> Sync for TrieDat
 ///
 /// - `T`: The type of data associated with each word in the trie.
 ///   Must implement `PartialEq` for equality checks.
-struct TrieNode<T: Default + PartialEq> {
+struct TrieNode<T: PartialEq> {
     children: HashMap<char, Box<TrieNode<T>>>,
     parent: *mut TrieNode<T>,
     word: Option<String>,
@@ -24,7 +24,7 @@ struct TrieNode<T: Default + PartialEq> {
     is_end: bool,
 }
 
-impl<T: Default + PartialEq> TrieNode<T> {
+impl<T: PartialEq> TrieNode<T> {
     fn new() -> Box<Self> {
         let node = TrieNode {
             children: HashMap::new(),
@@ -42,13 +42,13 @@ impl<T: Default + PartialEq> TrieNode<T> {
 /// # Type Parameters
 ///
 /// - `T`: The type of data associated with each word in the trie.
-///   Must implement `Clone`, `Default`, `PartialEq`, `Eq`, and `Hash` for various operations.
-pub(crate) struct TrieData<T: Clone + Default + PartialEq + Eq + Hash + Debug> {
+///   Must implement `Clone`, `PartialEq`, `Eq`, and `Hash` for various operations.
+pub(crate) struct TrieData<T: Clone + PartialEq + Eq + Hash + Debug> {
     root: Box<TrieNode<T>>,
     data_map: HashMap<T, Vec<*mut TrieNode<T>>>,
 }
 
-impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
+impl<T: Clone + PartialEq + Eq + Hash + Debug> TrieData<T> {
     /// Inserts a word and associated data into the trie.
     ///
     /// # Parameters
@@ -301,11 +301,11 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> TrieData<T> {
 /// # Type Parameters
 ///
 /// - `T`: The type of data associated with each word in the trie.
-pub struct Trie<T: Clone + Default + PartialEq + Eq + Hash + Debug> {
+pub struct Trie<T: Clone + PartialEq + Eq + Hash + Debug> {
     trie_data: Arc<RwLock<TrieData<T>>>,
 }
 
-impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> Trie<T> {
+impl<T: Clone + PartialEq + Eq + Hash + Debug> Trie<T> {
     /// Creates a new thread-safe `Trie` with an empty root node and data map.
     ///
     /// # Returns
@@ -468,7 +468,7 @@ impl<T: PartialEq> PartialEq for SearchResult<T> {
 // Custom debuggers and formatters so that we will be able to see the
 // Trie data structure in a more readable way (not just pointer addresses)
 
-impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> fmt::Debug for Trie<T> {
+impl<T: Clone + PartialEq + Eq + Hash + Debug> fmt::Debug for Trie<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let trie_data = self.trie_data.read().unwrap();
         f.debug_struct("Trie")
@@ -477,7 +477,7 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> fmt::Debug for Trie<T> 
     }
 }
 
-impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> fmt::Debug for TrieData<T> {
+impl<T: Clone + PartialEq + Eq + Hash + Debug> fmt::Debug for TrieData<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TrieData")
             .field("root", &*self.root)
@@ -486,7 +486,7 @@ impl<T: Clone + Default + PartialEq + Eq + Hash + Debug> fmt::Debug for TrieData
     }
 }
 
-impl<T: Default + PartialEq + Debug> fmt::Debug for TrieNode<T> {
+impl<T: PartialEq + Debug> fmt::Debug for TrieNode<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TrieNode")
             .field(

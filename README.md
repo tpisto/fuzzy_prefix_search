@@ -65,10 +65,10 @@ fn main() {
 
 ### Custom Data Types
 
-The Trie supports any data type that implements `Clone`, `Default`, `PartialEq`, `Eq`, and `Hash`:
+The Trie supports any data type that implements `Clone`, `PartialEq`, `Eq`, and `Hash`:
 
 ```rust
-#[derive(Clone, Default, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 struct CustomData {
     id: u32,
     value: String,

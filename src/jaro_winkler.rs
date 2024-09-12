@@ -1,7 +1,7 @@
 use crate::trie::TrieData;
 use std::hash::Hash;
 
-impl<T: Clone + Default + PartialEq + Eq + Hash + std::fmt::Debug> TrieData<T> {
+impl<T: Clone + PartialEq + Eq + Hash + std::fmt::Debug> TrieData<T> {
     pub(crate) fn calculate_jaro_winkler_score(&self, query: &str, word: &str) -> f32 {
         // Calculate Jaro distance
         let jaro_dist = self.jaro_distance(query, word);
